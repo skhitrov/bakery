@@ -1,0 +1,14 @@
+# Database
+diary.db
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+
+# SSH keys
+ruvds
+ruvds.pub
+
+# Environment
+.env

@@ -1,0 +1,6 @@
+[Unit]
+Description=Diary database backup
+
+[Service]
+Type=oneshot
+ExecStart=/opt/diary/backup.sh

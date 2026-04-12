@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}Журнал — {{ 'Куратор' if user.role == 'admin' else 'Учитель' }}{% endblock %}
+
+{% block body %}
+<header class="page-header">
+  <h1>Учебный журнал | проект «ПЕКАРНЯ»</h1>
+  <div class="user-info">
+    <span>{{ 'admin' if user.role == 'teacher' else user.full_name }}</span>
+    <a href="/logout">Выйти</a>
+  </div>
+</header>
+
+<div class="diary-container">
+
+  {% if user.role == 'teacher' %}
+  <section class="manage-students">
+    <h2>Управление учениками</h2>
+    <form method="post" action="/admin/add-student" class="add-student-grid">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="text" name="full_name" placeholder="Фамилия Имя ученика" required class="student-input">
+      <input type="text" name="parent_name" placeholder="ФИО родителя" required class="student-input">
+      <input type="email" name="parent_email" placeholder="Email родителя" required class="student-input">
+      <input type="text" name="parent_password" placeholder="Пароль родителя" required class="student-input">
+      <button type="submit" class="btn btn-small btn-add">Добавить</button>
+    </form>
+    <div class="table-wrapper">
+      <table class="week-table teacher-table">
+        <thead>
+          <tr>
+            <th>Ученик</th>
+            <th>Родитель</th>
+            <th>Email</th>
+            <th>Новый пароль</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in students %}
+          <tr>
+            <td>{{ s.full_name }}</td>
+            <td>{{ s.parent_name or '—' }}</td>
+            <td>{{ s.parent_email or '—' }}</td>
+            <td class="password-cell">
+              {% if s.parent_id %}
+              <form method="post" action="/admin/change-password" class="password-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="user_id" value="{{ s.parent_id }}">
+                <input type="text" name="new_password" placeholder="Новый пароль" required class="password-input">
+                <button type="submit" class="btn btn-small btn-add">Сменить</button>
+              </form>
+              {% endif %}
+            </td>
+            <td>
+              <form method="post" action="/admin/delete-student" class="inline-form"
+                    onsubmit="return confirm('Удалить ученика {{ s.full_name }}?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="student_id" value="{{ s.id }}">
+                <button type="submit" class="btn-delete">Удалить</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if user.role == 'admin' %}
+  <section class="manage-students">
+    <h2>Управление модулями</h2>
+    <form method="post" action="/admin/add-module" class="add-student-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="text" name="module_name" placeholder="Название месяца (например, Октябрь)" required class="student-input">
+      <button type="submit" class="btn btn-small btn-add">Добавить</button>
+    </form>
+    <ul class="student-list">
+      {% for m in modules %}
+      <li>
+        <span>{{ m.name }}</span>
+        <form method="post" action="/admin/delete-module" class="inline-form"
+              onsubmit="return confirm('Удалить модуль {{ m.name }} и все его данные?')">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="module_id" value="{{ m.id }}">
+          <button type="submit" class="btn-delete">Удалить</button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  {% if conflict_error %}
+  <div class="alert alert-error">
+    Данные были изменены другим пользователем. Ваши изменения не сохранены. Проверьте актуальные данные ниже и попробуйте снова.
+  </div>
+  {% endif %}
+
+  <form method="post" action="/admin/save">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    {% for md in module_data %}
+    <div class="module-title">Модуль {{ md.module.name }}</div>
+
+    {% for week in md.weeks %}
+    <section class="week-section">
+      <div class="week-title">Неделя {{ week.week_number }}</div>
+      <div class="table-wrapper">
+        <table class="week-table admin-table">
+          <thead>
+            <tr>
+              <th>Ф.И.</th>
+              <th>Уроки теории</th>
+              <th>Уроки практики</th>
+              <th>ДЗ 1</th>
+              <th>ДЗ 2</th>
+              <th>ДЗ 3</th>
+              <th>ДЗ 4</th>
+              <th>Тесты</th>
+              {% if md.module.name in ['Октябрь', 'Декабрь', 'Февраль', 'Апрель'] %}
+              <th>Пробники</th>
+              {% endif %}
+              <th>Комментарии</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in week.rows %}
+            {% set p = "m" ~ md.module.id ~ "_w" ~ week.week_number ~ "_s" ~ row.student.id ~ "_" %}
+            <tr>
+              <input type="hidden" name="{{ p }}updated_at" value="{{ row.record.get('updated_at', 0) }}">
+              <td class="student-cell">{{ row.student.full_name }}</td>
+              <td><input type="checkbox" name="{{ p }}theory" {{ 'checked' if row.record.get('theory') }}></td>
+              <td><input type="checkbox" name="{{ p }}practice" {{ 'checked' if row.record.get('practice') }}></td>
+              <td><input type="checkbox" name="{{ p }}hw1" {{ 'checked' if row.record.get('hw1') }}></td>
+              <td><input type="checkbox" name="{{ p }}hw2" {{ 'checked' if row.record.get('hw2') }}></td>
+              <td><input type="checkbox" name="{{ p }}hw3" {{ 'checked' if row.record.get('hw3') }}></td>
+              <td><input type="checkbox" name="{{ p }}hw4" {{ 'checked' if row.record.get('hw4') }}></td>
+              <td><input type="checkbox" name="{{ p }}test" {{ 'checked' if row.record.get('test') }}></td>
+              {% if md.module.name in ['Октябрь', 'Декабрь', 'Февраль', 'Апрель'] %}
+              <td><textarea name="{{ p }}trial_exam" rows="5" class="comment-input" placeholder="...">{{ row.record.get('trial_exam', '') }}</textarea></td>
+              {% endif %}
+              <td><textarea name="{{ p }}comment" rows="5" class="comment-input" placeholder="...">{{ row.record.get('comment', '') }}</textarea></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    {% endfor %}
+    {% endfor %}
+
+    {% if module_data %}
+    <div class="save-bar">
+      <button type="submit" class="btn">Сохранить</button>
+    </div>
+    {% endif %}
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

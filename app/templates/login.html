@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Вход — Учебный журнал | проект «ПЕКАРНЯ»{% endblock %}
+
+{% block body %}
+<div class="login-wrapper">
+  <div class="login-card">
+    <h1>Учебный журнал | проект «ПЕКАРНЯ»</h1>
+    <p class="subtitle">Войдите в свой аккаунт</p>
+
+    {% if error %}
+    <div class="error-msg">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" action="/login">
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" required autocomplete="email" autofocus>
+      </div>
+      <div class="form-group">
+        <label for="password">Пароль</label>
+        <input type="password" id="password" name="password" required autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn">Войти</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

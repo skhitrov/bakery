@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Дневник — {{ user.full_name }}{% endblock %}
+
+{% block body %}
+<header class="page-header">
+  <h1>Учебный журнал | проект «ПЕКАРНЯ»</h1>
+  <div class="user-info">
+    <span>{{ user.full_name }}</span>
+    <a href="/logout">Выйти</a>
+  </div>
+</header>
+
+<div class="diary-container">
+  {% for entry in data %}
+  <section class="student-section">
+    <div class="student-name">{{ entry.student.full_name }}</div>
+
+    {% for md in entry.modules %}
+    <div class="module-title">Модуль {{ md.module.name }}</div>
+
+    {% for week in md.weeks %}
+    <div class="week-block">
+      <div class="week-title">Неделя {{ week.week_number }}</div>
+      <div class="table-wrapper">
+        <table class="week-table">
+          <thead>
+            <tr>
+              <th>Уроки теории</th>
+              <th>Уроки практики</th>
+              <th>ДЗ 1</th>
+              <th>ДЗ 2</th>
+              <th>ДЗ 3</th>
+              <th>ДЗ 4</th>
+              <th>Тесты</th>
+              {% if md.module.name in ['Октябрь', 'Декабрь', 'Февраль', 'Апрель'] %}
+              <th>Пробники</th>
+              {% endif %}
+              <th>Комментарии</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                {% if week.get('theory') %}
+                  <span class="attendance-yes">да</span>
+                {% else %}
+                  <span class="attendance-no">нет</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if week.get('practice') %}
+                  <span class="attendance-yes">да</span>
+                {% else %}
+                  <span class="attendance-no">нет</span>
+                {% endif %}
+              </td>
+              <td><span class="{{ 'check-yes' if week.get('hw1') else 'check-no' }}">{{ 'сдал' if week.get('hw1') else 'не сдал' }}</span></td>
+              <td><span class="{{ 'check-yes' if week.get('hw2') else 'check-no' }}">{{ 'сдал' if week.get('hw2') else 'не сдал' }}</span></td>
+              <td><span class="{{ 'check-yes' if week.get('hw3') else 'check-no' }}">{{ 'сдал' if week.get('hw3') else 'не сдал' }}</span></td>
+              <td><span class="{{ 'check-yes' if week.get('hw4') else 'check-no' }}">{{ 'сдал' if week.get('hw4') else 'не сдал' }}</span></td>
+              <td><span class="{{ 'check-yes' if week.get('test') else 'check-no' }}">{{ '✓' if week.get('test') else '—' }}</span></td>
+              {% if md.module.name in ['Октябрь', 'Декабрь', 'Февраль', 'Апрель'] %}
+              <td class="comment">{{ week.get('trial_exam', '') }}</td>
+              {% endif %}
+              <td class="comment">{{ week.get('comment', '') }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endfor %}
+    {% endfor %}
+  </section>
+  {% endfor %}
+</div>
+{% endblock %}
