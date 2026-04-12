@@ -24,6 +24,7 @@ jobs:
           rsync -azv --delete \
             -e "ssh -i ~/.ssh/deploy_key" \
             --exclude='.git' \
+            --exclude='.venv' \
             --exclude='diary.db' \
             --exclude='__pycache__' \
             --exclude='.env' \
