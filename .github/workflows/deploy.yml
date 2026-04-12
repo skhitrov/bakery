@@ -10,29 +10,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Deploy to server
+      - name: Setup SSH
         env:
           SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
           SERVER_IP: ${{ vars.SERVER_IP }}
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq rsync > /dev/null
           mkdir -p ~/.ssh
           echo "$SERVER_SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "$SERVER_IP" >> ~/.ssh/known_hosts
 
+      - name: Deploy
+        env:
+          SERVER_IP: ${{ vars.SERVER_IP }}
+        run: |
           SSH="ssh -i ~/.ssh/deploy_key root@${SERVER_IP}"
+          SCP="scp -i ~/.ssh/deploy_key -r"
 
-          $SSH "rm -rf /opt/diary/.venv && python3 -m venv /opt/diary/.venv"
+          # Clean old app files (but preserve .venv, diary.db, backups)
+          $SSH "find /opt/diary -maxdepth 1 -not -name diary -not -name .venv -not -name diary.db -not -name backups -not -name .env | tail -n +2 | xargs rm -rf"
 
-          rsync -azv \
-            -e "ssh -i ~/.ssh/deploy_key" \
-            --exclude='.git' \
-            --exclude='.venv' \
-            --exclude='diary.db' \
-            --exclude='__pycache__' \
-            --exclude='.env' \
-            --exclude='backups' \
-            ./ "root@${SERVER_IP}:/opt/diary/"
+          # Copy project files
+          $SCP app pyproject.toml seed.py backup.sh diary-backup.service diary-backup.timer CLAUDE.md "root@${SERVER_IP}:/opt/diary/"
 
-          $SSH "cd /opt/diary && .venv/bin/pip install -e . --quiet && systemctl restart diary"
+          # Recreate venv if broken, install deps, restart
+          $SSH "cd /opt/diary && \
+            [ -x .venv/bin/pip ] || (rm -rf .venv && python3 -m venv .venv) && \
+            .venv/bin/pip install -e . --quiet && \
+            systemctl restart diary"
