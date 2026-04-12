@@ -11,6 +11,9 @@ dependencies = [
     "itsdangerous>=2.2",
 ]
 
+[tool.setuptools.packages.find]
+include = ["app*"]
+
 [project.optional-dependencies]
 dev = [
     "ruff>=0.9",
