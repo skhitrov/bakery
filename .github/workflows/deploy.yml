@@ -23,8 +23,8 @@ jobs:
 
           rsync -azv --delete \
             -e "ssh -i ~/.ssh/deploy_key" \
+            --filter='P .venv' \
             --exclude='.git' \
-            --exclude='.venv' \
             --exclude='diary.db' \
             --exclude='__pycache__' \
             --exclude='.env' \
@@ -33,6 +33,6 @@ jobs:
 
           ssh -i ~/.ssh/deploy_key "root@${SERVER_IP}" "\
             cd /opt/diary && \
-            [ -d .venv ] || python3 -m venv .venv && \
+            python3 -m venv .venv && \
             .venv/bin/pip install -e . --quiet && \
             systemctl restart diary"
