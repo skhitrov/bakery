@@ -21,19 +21,18 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "$SERVER_IP" >> ~/.ssh/known_hosts
 
-          rsync -azv --delete \
+          SSH="ssh -i ~/.ssh/deploy_key root@${SERVER_IP}"
+
+          $SSH "rm -rf /opt/diary/.venv && python3 -m venv /opt/diary/.venv"
+
+          rsync -azv \
             -e "ssh -i ~/.ssh/deploy_key" \
-            --filter='P .venv' \
             --exclude='.git' \
+            --exclude='.venv' \
             --exclude='diary.db' \
             --exclude='__pycache__' \
             --exclude='.env' \
             --exclude='backups' \
             ./ "root@${SERVER_IP}:/opt/diary/"
 
-          ssh -i ~/.ssh/deploy_key "root@${SERVER_IP}" "\
-            cd /opt/diary && \
-            rm -rf .venv && \
-            python3 -m venv .venv && \
-            .venv/bin/pip install -e . --quiet && \
-            systemctl restart diary"
+          $SSH "cd /opt/diary && .venv/bin/pip install -e . --quiet && systemctl restart diary"
