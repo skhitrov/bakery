@@ -15,6 +15,7 @@ jobs:
           SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
           SERVER_IP: ${{ vars.SERVER_IP }}
         run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq rsync > /dev/null
           mkdir -p ~/.ssh
           echo "$SERVER_SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
