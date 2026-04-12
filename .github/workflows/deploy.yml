@@ -1,0 +1,35 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to server
+        env:
+          SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SERVER_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$SERVER_IP" >> ~/.ssh/known_hosts
+
+          rsync -azv --delete \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            --exclude='.git' \
+            --exclude='diary.db' \
+            --exclude='__pycache__' \
+            --exclude='.env' \
+            --exclude='backups' \
+            ./ "root@${SERVER_IP}:/opt/diary/"
+
+          ssh -i ~/.ssh/deploy_key "root@${SERVER_IP}" "\
+            cd /opt/diary && \
+            .venv/bin/pip install -e . --quiet && \
+            systemctl restart diary"
