@@ -33,6 +33,7 @@ jobs:
 
           ssh -i ~/.ssh/deploy_key "root@${SERVER_IP}" "\
             cd /opt/diary && \
+            rm -rf .venv && \
             python3 -m venv .venv && \
             .venv/bin/pip install -e . --quiet && \
             systemctl restart diary"
