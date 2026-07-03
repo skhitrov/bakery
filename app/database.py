@@ -12,10 +12,17 @@ CREATE TABLE IF NOT EXISTS users (
     full_name   TEXT    NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS streams (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    name        TEXT    NOT NULL,
+    position    INTEGER NOT NULL DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS students (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     full_name   TEXT    NOT NULL,
-    parent_id   INTEGER REFERENCES users(id)
+    parent_id   INTEGER REFERENCES users(id),
+    stream_id   INTEGER REFERENCES streams(id)
 );
 
 CREATE TABLE IF NOT EXISTS modules (
@@ -69,3 +76,7 @@ def init_db() -> None:
         cols = [r[1] for r in conn.execute("PRAGMA table_info(weekly_records)").fetchall()]
         if "updated_at" not in cols:
             conn.execute("ALTER TABLE weekly_records ADD COLUMN updated_at REAL NOT NULL DEFAULT 0")
+        # Migrate: add stream_id to students if missing (existing DBs)
+        scols = [r[1] for r in conn.execute("PRAGMA table_info(students)").fetchall()]
+        if "stream_id" not in scols:
+            conn.execute("ALTER TABLE students ADD COLUMN stream_id INTEGER REFERENCES streams(id)")

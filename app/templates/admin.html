@@ -18,6 +18,12 @@
     <form method="post" action="/admin/add-student" class="add-student-grid">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <input type="text" name="full_name" placeholder="Фамилия Имя ученика" required class="student-input">
+      <select name="stream_id" required class="student-input">
+        <option value="" disabled selected>— поток —</option>
+        {% for st in streams %}
+        <option value="{{ st.id }}">{{ st.name }}</option>
+        {% endfor %}
+      </select>
       <input type="text" name="parent_name" placeholder="ФИО родителя" required class="student-input">
       <input type="email" name="parent_email" placeholder="Email родителя" required class="student-input">
       <input type="text" name="parent_password" placeholder="Пароль родителя" required class="student-input">
@@ -28,6 +34,7 @@
         <thead>
           <tr>
             <th>Ученик</th>
+            <th>Поток</th>
             <th>Родитель</th>
             <th>Email</th>
             <th>Новый пароль</th>
@@ -38,6 +45,7 @@
           {% for s in students %}
           <tr>
             <td>{{ s.full_name }}</td>
+            <td>{{ s.stream_name or '—' }}</td>
             <td>{{ s.parent_name or '—' }}</td>
             <td>{{ s.parent_email or '—' }}</td>
             <td class="password-cell">
@@ -89,14 +97,57 @@
     </ul>
   </section>
 
+  <section class="manage-students">
+    <h2>Управление потоками</h2>
+    <form method="post" action="/admin/add-stream" class="add-student-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="text" name="stream_name" placeholder="Название потока (например, Поток 3)" required class="student-input">
+      <button type="submit" class="btn btn-small btn-add">Добавить</button>
+    </form>
+    <ul class="student-list">
+      {% for st in streams %}
+      <li>
+        <span>{{ st.name }}</span>
+        <form method="post" action="/admin/delete-stream" class="inline-form"
+              onsubmit="return confirm('Удалить поток {{ st.name }}? Ученики останутся без потока.')">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="stream_id" value="{{ st.id }}">
+          <button type="submit" class="btn-delete">Удалить</button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="manage-students stream-selector">
+    <h2>Поток</h2>
+    <form method="get" action="/admin">
+      <select name="stream" class="student-input" onchange="this.form.submit()">
+        <option value="" {{ 'selected' if not selected_stream }}>— выберите поток —</option>
+        <option value="all" {{ 'selected' if selected_stream == 'all' }}>Все потоки</option>
+        {% for st in streams %}
+        <option value="{{ st.id }}" {{ 'selected' if selected_stream == st.id|string }}>{{ st.name }}</option>
+        {% endfor %}
+      </select>
+      <noscript><button type="submit" class="btn btn-small">Показать</button></noscript>
+    </form>
+  </section>
+
   {% if conflict_error %}
   <div class="alert alert-error">
     Данные были изменены другим пользователем. Ваши изменения не сохранены. Проверьте актуальные данные ниже и попробуйте снова.
   </div>
   {% endif %}
 
+  {% if not selected_stream %}
+  <p class="hint">Выберите поток, чтобы увидеть журнал.</p>
+  {% elif not module_data %}
+  <p class="hint">В этом потоке пока нет учеников.</p>
+  {% endif %}
+
   <form method="post" action="/admin/save">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="stream" value="{{ selected_stream }}">
     {% for md in module_data %}
     <div class="module-title">Модуль {{ md.module.name }}</div>
 

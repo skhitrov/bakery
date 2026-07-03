@@ -272,6 +272,23 @@ body {
   box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
 }
 
+select.student-input {
+  appearance: none;
+  -webkit-appearance: none;
+  background: #fff;
+  cursor: pointer;
+}
+
+.stream-selector select.student-input {
+  flex: none;
+  min-width: 220px;
+}
+
+.hint {
+  color: var(--text-muted);
+  padding: 0.75rem 0;
+}
+
 .btn-small {
   padding: 0.5rem 1rem;
   width: auto;
@@ -324,7 +341,7 @@ body {
 /* === Teacher: Add Student Grid Form === */
 .add-student-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr) auto;
+  grid-template-columns: repeat(5, 1fr) auto;
   gap: 0.5rem;
   margin-bottom: 1rem;
 }

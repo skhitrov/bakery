@@ -75,6 +75,8 @@ async def admin_add_student(request: Request):
     parent_email = (form.get("parent_email") or "").strip()
     parent_password = form.get("parent_password") or ""
     parent_name = (form.get("parent_name") or "").strip()
+    stream_id_raw = (form.get("stream_id") or "").strip()
+    stream_id = int(stream_id_raw) if stream_id_raw.isdigit() else None
 
     with get_db() as conn:
         parent_id = None
@@ -93,7 +95,8 @@ async def admin_add_student(request: Request):
                 )
                 parent_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
         conn.execute(
-            "INSERT INTO students (full_name, parent_id) VALUES (?, ?)", (full_name, parent_id)
+            "INSERT INTO students (full_name, parent_id, stream_id) VALUES (?, ?, ?)",
+            (full_name, parent_id, stream_id),
         )
     return RedirectResponse("/admin", status_code=303)
 
@@ -176,10 +179,51 @@ async def admin_delete_module(request: Request):
     return RedirectResponse("/admin", status_code=303)
 
 
+@app.post("/admin/add-stream")
+async def admin_add_stream(request: Request):
+    user = get_current_user(request)
+    if not user or user["role"] != "admin":
+        return RedirectResponse("/login", status_code=303)
+
+    form = await request.form()
+    if not _check_csrf(request, form, user):
+        return _csrf_error()
+
+    stream_name = (form.get("stream_name") or "").strip()
+    if stream_name:
+        with get_db() as conn:
+            max_pos = conn.execute(
+                "SELECT COALESCE(MAX(position), 0) FROM streams"
+            ).fetchone()[0]
+            conn.execute(
+                "INSERT INTO streams (name, position) VALUES (?, ?)",
+                (stream_name, max_pos + 1),
+            )
+    return RedirectResponse("/admin", status_code=303)
+
+
+@app.post("/admin/delete-stream")
+async def admin_delete_stream(request: Request):
+    user = get_current_user(request)
+    if not user or user["role"] != "admin":
+        return RedirectResponse("/login", status_code=303)
+
+    form = await request.form()
+    if not _check_csrf(request, form, user):
+        return _csrf_error()
+
+    stream_id = int(form.get("stream_id") or 0)
+    with get_db() as conn:
+        # Keep the students; just unassign them from the deleted stream.
+        conn.execute("UPDATE students SET stream_id = NULL WHERE stream_id = ?", (stream_id,))
+        conn.execute("DELETE FROM streams WHERE id = ?", (stream_id,))
+    return RedirectResponse("/admin", status_code=303)
+
+
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request, error: str = ""):
     return templates.TemplateResponse(
-        "login.html", {"request": request, "error": error}
+        request, "login.html", {"request": request, "error": error}
     )
 
 
@@ -192,6 +236,7 @@ async def login_submit(
     ip = _client_ip(request)
     if not check_rate_limit(ip):
         return templates.TemplateResponse(
+            request,
             "login.html",
             {"request": request, "error": "Слишком много попыток. Подождите минуту."},
             status_code=429,
@@ -201,6 +246,7 @@ async def login_submit(
     if not user:
         record_failed_login(ip)
         return templates.TemplateResponse(
+            request,
             "login.html",
             {"request": request, "error": "Неверный email или пароль"},
             status_code=401,
@@ -270,13 +316,14 @@ async def diary_page(request: Request):
             result.append({"student": s, "modules": student_modules})
 
     return templates.TemplateResponse(
+        request,
         "diary.html",
         {"request": request, "user": user, "data": result},
     )
 
 
 @app.get("/admin", response_class=HTMLResponse)
-async def admin_page(request: Request, error: str = ""):
+async def admin_page(request: Request, error: str = "", stream: str = ""):
     user = get_current_user(request)
     if not user or user["role"] not in ("teacher", "admin"):
         return RedirectResponse("/login", status_code=303)
@@ -286,19 +333,35 @@ async def admin_page(request: Request, error: str = ""):
 
     with get_db() as conn:
         students = conn.execute(
-            "SELECT s.*, u.full_name AS parent_name, u.email AS parent_email "
-            "FROM students s LEFT JOIN users u ON s.parent_id = u.id "
+            "SELECT s.*, u.full_name AS parent_name, u.email AS parent_email, "
+            "st.name AS stream_name "
+            "FROM students s "
+            "LEFT JOIN users u ON s.parent_id = u.id "
+            "LEFT JOIN streams st ON s.stream_id = st.id "
             "ORDER BY s.full_name"
         ).fetchall()
         students = [dict(s) for s in students]
+
+        streams = conn.execute(
+            "SELECT * FROM streams ORDER BY position, id"
+        ).fetchall()
+        streams = [dict(s) for s in streams]
 
         modules = conn.execute(
             "SELECT * FROM modules ORDER BY position"
         ).fetchall()
         modules = [dict(m) for m in modules]
 
+        # The curator grid is scoped to the selected Поток (cohort).
+        grid_students = []
+        if user["role"] == "admin" and stream:
+            if stream == "all":
+                grid_students = students
+            elif stream.isdigit():
+                grid_students = [s for s in students if s["stream_id"] == int(stream)]
+
         module_data = []
-        if user["role"] == "admin":
+        if user["role"] == "admin" and grid_students:
             records = conn.execute(
                 "SELECT * FROM weekly_records ORDER BY module_id, week_number, student_id"
             ).fetchall()
@@ -313,13 +376,14 @@ async def admin_page(request: Request, error: str = ""):
                 weeks = []
                 for wn in range(1, WEEKS_PER_MODULE + 1):
                     rows = []
-                    for s in students:
+                    for s in grid_students:
                         rec = rec_map.get(mod["id"], {}).get(wn, {}).get(s["id"], {})
                         rows.append({"student": s, "record": rec})
                     weeks.append({"week_number": wn, "rows": rows})
                 module_data.append({"module": mod, "weeks": weeks})
 
     return templates.TemplateResponse(
+        request,
         "admin.html",
         {
             "request": request,
@@ -327,6 +391,8 @@ async def admin_page(request: Request, error: str = ""):
             "module_data": module_data,
             "modules": modules,
             "students": students,
+            "streams": streams,
+            "selected_stream": stream,
             "csrf_token": csrf_token,
             "conflict_error": conflict_error,
         },
@@ -343,6 +409,7 @@ async def admin_save(request: Request):
     if not _check_csrf(request, form, user):
         return _csrf_error()
 
+    stream = (form.get("stream") or "").strip()
     now = time.time()
 
     with get_db() as conn:
@@ -354,7 +421,16 @@ async def admin_save(request: Request):
             existing[(r["student_id"], r["module_id"], r["week_number"])] = r["updated_at"]
 
         modules = conn.execute("SELECT id FROM modules").fetchall()
-        students = conn.execute("SELECT id FROM students").fetchall()
+        # Only touch the cohort that was rendered — otherwise unrendered cells
+        # for other Потоки would post as 0/"" and wipe their records.
+        if stream == "all":
+            students = conn.execute("SELECT id FROM students").fetchall()
+        elif stream.isdigit():
+            students = conn.execute(
+                "SELECT id FROM students WHERE stream_id = ?", (int(stream),)
+            ).fetchall()
+        else:
+            students = []
 
         # Check for conflicts first
         for mod in modules:
@@ -370,7 +446,9 @@ async def admin_save(request: Request):
                         form_ts = 0.0
                     db_ts = existing.get((sid, mid, wn), 0.0)
                     if db_ts > form_ts:
-                        return RedirectResponse("/admin?error=conflict", status_code=303)
+                        return RedirectResponse(
+                            f"/admin?error=conflict&stream={stream}", status_code=303
+                        )
 
         # No conflicts — save all records
         for mod in modules:
@@ -401,4 +479,4 @@ async def admin_save(request: Request):
                         (sid, mid, wn, theory, practice, hw1, hw2, hw3, hw4, test, trial_exam, comment, now),
                     )
 
-    return RedirectResponse("/admin", status_code=303)
+    return RedirectResponse(f"/admin?stream={stream}", status_code=303)
