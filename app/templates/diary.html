@@ -6,7 +6,10 @@
   <h1>Учебный журнал | проект «ПЕКАРНЯ»</h1>
   <div class="user-info">
     <span>{{ user.full_name }}</span>
-    <a href="/logout">Выйти</a>
+    <form method="post" action="/logout" class="logout-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit" class="logout-btn">Выйти</button>
+    </form>
   </div>
 </header>
 

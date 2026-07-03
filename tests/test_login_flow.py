@@ -61,11 +61,18 @@ def test_rate_limited_after_five_failures(client, make_user):
     assert r.status_code == 429
 
 
-def test_logout_clears_cookie(client, make_user, login):
-    make_user("admin", "boss@test.ru", "pass123")
+def test_logout_is_post_only_and_clears_cookie(client, make_user, login, csrf):
+    uid = make_user("admin", "boss@test.ru", "pass123")
     login("boss@test.ru")
-    r = client.get("/logout", follow_redirects=False)
+    # GET logout is rejected (it must be a CSRF-protected POST to avoid
+    # forced-logout via <img src="/logout">).
+    assert client.get("/logout", follow_redirects=False).status_code == 405
+    r = client.post(
+        "/logout",
+        data={"csrf_token": csrf(uid)},
+        follow_redirects=False,
+    )
     assert r.status_code == 303
     assert r.headers["location"] == "/login"
     # deletion sends an expired/empty session cookie
-    assert 'session=' in r.headers.get("set-cookie", "").lower()
+    assert "session=" in r.headers.get("set-cookie", "").lower()

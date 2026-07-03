@@ -12,3 +12,9 @@ ruvds.pub
 
 # Environment
 .env
+
+# Database backups (contain full DB copies with password hashes)
+backups/
+
+# Claude Code local settings (may hold host/credential permission rules)
+.claude/

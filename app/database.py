@@ -5,11 +5,12 @@ from app.config import DB_PATH
 
 SCHEMA = """\
 CREATE TABLE IF NOT EXISTS users (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    email       TEXT    NOT NULL UNIQUE,
-    password    TEXT    NOT NULL,
-    role        TEXT    NOT NULL CHECK (role IN ('parent', 'teacher', 'admin')),
-    full_name   TEXT    NOT NULL
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    email           TEXT    NOT NULL UNIQUE,
+    password        TEXT    NOT NULL,
+    role            TEXT    NOT NULL CHECK (role IN ('parent', 'teacher', 'admin')),
+    full_name       TEXT    NOT NULL,
+    session_version INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS streams (
@@ -80,3 +81,7 @@ def init_db() -> None:
         scols = [r[1] for r in conn.execute("PRAGMA table_info(students)").fetchall()]
         if "stream_id" not in scols:
             conn.execute("ALTER TABLE students ADD COLUMN stream_id INTEGER REFERENCES streams(id)")
+        # Migrate: add session_version to users if missing (session revocation)
+        ucols = [r[1] for r in conn.execute("PRAGMA table_info(users)").fetchall()]
+        if "session_version" not in ucols:
+            conn.execute("ALTER TABLE users ADD COLUMN session_version INTEGER NOT NULL DEFAULT 0")

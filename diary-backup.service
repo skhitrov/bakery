@@ -4,3 +4,12 @@ Description=Diary database backup
 [Service]
 Type=oneshot
 ExecStart=/opt/diary/backup.sh
+# Run as the unprivileged app user (chown /opt/diary/backups to diary first).
+User=diary
+Group=diary
+# Sandboxing: drop privileges and confine writes to the app directory.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/diary

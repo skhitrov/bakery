@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 
-from app.config import SESSION_COOKIE, MIN_PASSWORD_LENGTH
+from app.config import SESSION_COOKIE, MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH
 from app.database import init_db, get_db
 from app.auth import (
     authenticate,
@@ -18,6 +18,7 @@ from app.auth import (
     validate_csrf_token,
     check_rate_limit,
     record_failed_login,
+    bump_session_version,
 )
 
 WEEKS_PER_MODULE = 4
@@ -36,11 +37,47 @@ templates = Jinja2Templates(directory=str(_base / "templates"))
 app.mount("/static", StaticFiles(directory=str(_base / "static")), name="static")
 
 
+@app.middleware("http")
+async def _security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "no-referrer")
+    response.headers.setdefault(
+        "Content-Security-Policy",
+        "default-src 'self'; object-src 'none'; base-uri 'self'; "
+        "frame-ancestors 'none'; form-action 'self'",
+    )
+    # HSTS is only meaningful over HTTPS; nginx sets it too once TLS is enabled.
+    if _is_https(request):
+        response.headers.setdefault(
+            "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
+        )
+    return response
+
+
+# Only trust X-Forwarded-For when the direct peer is our own reverse proxy.
+# uvicorn binds 127.0.0.1 and only nginx connects to it, so any other peer is a
+# direct (untrusted) client whose XFF header must be ignored.
+_TRUSTED_PROXIES = {"127.0.0.1", "::1"}
+
+
 def _client_ip(request: Request) -> str:
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
+    peer = request.client.host if request.client else "unknown"
+    if peer in _TRUSTED_PROXIES:
+        forwarded = request.headers.get("x-forwarded-for")
+        if forwarded:
+            # nginx appends the real client as the right-most hop
+            # (X-Forwarded-For $proxy_add_x_forwarded_for), so take the last
+            # entry — the left-most values are attacker-supplied.
+            return forwarded.split(",")[-1].strip()
+    return peer
+
+
+def _is_https(request: Request) -> bool:
+    """True if the original client request used HTTPS (via X-Forwarded-Proto)."""
+    proto = request.headers.get("x-forwarded-proto", request.url.scheme)
+    return proto.split(",")[0].strip() == "https"
 
 
 def _csrf_error() -> HTMLResponse:
@@ -49,6 +86,12 @@ def _csrf_error() -> HTMLResponse:
 
 def _check_csrf(request: Request, form: dict, user: dict) -> bool:
     return validate_csrf_token(form.get("csrf_token"), user["id"])
+
+
+def _form_int(form: dict, key: str) -> int | None:
+    """Parse a form field as a non-negative int, or None if malformed."""
+    raw = (form.get(key) or "").strip()
+    return int(raw) if raw.isdigit() else None
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -84,7 +127,7 @@ async def admin_add_student(request: Request):
     with get_db() as conn:
         parent_id = None
         if parent_email and parent_password:
-            if len(parent_password) < MIN_PASSWORD_LENGTH:
+            if not (MIN_PASSWORD_LENGTH <= len(parent_password) <= MAX_PASSWORD_LENGTH):
                 return RedirectResponse("/admin", status_code=303)
             existing = conn.execute(
                 "SELECT id FROM users WHERE email = ?", (parent_email,)
@@ -114,12 +157,15 @@ async def admin_change_password(request: Request):
     if not _check_csrf(request, form, user):
         return _csrf_error()
 
-    user_id = int(form.get("user_id") or 0)
+    user_id = _form_int(form, "user_id")
     new_password = (form.get("new_password") or "").strip()
-    if new_password and len(new_password) >= MIN_PASSWORD_LENGTH:
+    if user_id is not None and MIN_PASSWORD_LENGTH <= len(new_password) <= MAX_PASSWORD_LENGTH:
         with get_db() as conn:
+            # Change the password and invalidate the parent's existing sessions
+            # in one statement; the role guard prevents touching staff accounts.
             conn.execute(
-                "UPDATE users SET password = ? WHERE id = ? AND role = 'parent'",
+                "UPDATE users SET password = ?, session_version = session_version + 1 "
+                "WHERE id = ? AND role = 'parent'",
                 (hash_password(new_password), user_id),
             )
     return RedirectResponse("/admin", status_code=303)
@@ -135,7 +181,9 @@ async def admin_delete_student(request: Request):
     if not _check_csrf(request, form, user):
         return _csrf_error()
 
-    student_id = int(form.get("student_id") or 0)
+    student_id = _form_int(form, "student_id")
+    if student_id is None:
+        return RedirectResponse("/admin", status_code=303)
     with get_db() as conn:
         conn.execute("DELETE FROM weekly_records WHERE student_id = ?", (student_id,))
         conn.execute("DELETE FROM students WHERE id = ?", (student_id,))
@@ -175,7 +223,9 @@ async def admin_delete_module(request: Request):
     if not _check_csrf(request, form, user):
         return _csrf_error()
 
-    module_id = int(form.get("module_id") or 0)
+    module_id = _form_int(form, "module_id")
+    if module_id is None:
+        return RedirectResponse("/admin", status_code=303)
     with get_db() as conn:
         conn.execute("DELETE FROM weekly_records WHERE module_id = ?", (module_id,))
         conn.execute("DELETE FROM modules WHERE id = ?", (module_id,))
@@ -215,7 +265,9 @@ async def admin_delete_stream(request: Request):
     if not _check_csrf(request, form, user):
         return _csrf_error()
 
-    stream_id = int(form.get("stream_id") or 0)
+    stream_id = _form_int(form, "stream_id")
+    if stream_id is None:
+        return RedirectResponse("/admin", status_code=303)
     with get_db() as conn:
         # Keep the students; just unassign them from the deleted stream.
         conn.execute("UPDATE students SET stream_id = NULL WHERE stream_id = ?", (stream_id,))
@@ -257,17 +309,27 @@ async def login_submit(
     response = RedirectResponse("/", status_code=303)
     response.set_cookie(
         SESSION_COOKIE,
-        create_session_cookie(user["id"]),
+        create_session_cookie(user["id"], user["session_version"]),
         httponly=True,
         samesite="strict",
+        secure=_is_https(request),
     )
     return response
 
 
-@app.get("/logout")
-async def logout():
+@app.post("/logout")
+async def logout(request: Request):
+    user = get_current_user(request)
+    form = await request.form()
+    if user:
+        if not _check_csrf(request, form, user):
+            return _csrf_error()
+        # Invalidate every outstanding session token for this user.
+        bump_session_version(user["id"])
     response = RedirectResponse("/login", status_code=303)
-    response.delete_cookie(SESSION_COOKIE)
+    response.delete_cookie(
+        SESSION_COOKIE, httponly=True, samesite="strict", secure=_is_https(request)
+    )
     return response
 
 
@@ -321,7 +383,12 @@ async def diary_page(request: Request):
     return templates.TemplateResponse(
         request,
         "diary.html",
-        {"request": request, "user": user, "data": result},
+        {
+            "request": request,
+            "user": user,
+            "data": result,
+            "csrf_token": generate_csrf_token(user["id"]),
+        },
     )
 
 

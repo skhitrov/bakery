@@ -6,7 +6,10 @@
   <h1>Учебный журнал | проект «ПЕКАРНЯ»</h1>
   <div class="user-info">
     <span>{{ 'admin' if user.role == 'teacher' else user.full_name }}</span>
-    <a href="/logout">Выйти</a>
+    <form method="post" action="/logout" class="logout-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit" class="logout-btn">Выйти</button>
+    </form>
   </div>
 </header>
 
@@ -26,7 +29,7 @@
       </select>
       <input type="text" name="parent_name" placeholder="ФИО родителя" required class="student-input">
       <input type="email" name="parent_email" placeholder="Email родителя" required class="student-input">
-      <input type="text" name="parent_password" placeholder="Пароль родителя" required class="student-input">
+      <input type="password" name="parent_password" placeholder="Пароль родителя" required class="student-input">
       <button type="submit" class="btn btn-small btn-add">Добавить</button>
     </form>
     <div class="table-wrapper">
@@ -53,14 +56,14 @@
               <form method="post" action="/admin/change-password" class="password-form">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <input type="hidden" name="user_id" value="{{ s.parent_id }}">
-                <input type="text" name="new_password" placeholder="Новый пароль" required class="password-input">
+                <input type="password" name="new_password" placeholder="Новый пароль" required class="password-input">
                 <button type="submit" class="btn btn-small btn-add">Сменить</button>
               </form>
               {% endif %}
             </td>
             <td>
               <form method="post" action="/admin/delete-student" class="inline-form"
-                    onsubmit="return confirm('Удалить ученика {{ s.full_name }}?')">
+                    data-confirm="Удалить ученика {{ s.full_name }}?">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <input type="hidden" name="student_id" value="{{ s.id }}">
                 <button type="submit" class="btn-delete">Удалить</button>
@@ -87,7 +90,7 @@
       <li>
         <span>{{ m.name }}</span>
         <form method="post" action="/admin/delete-module" class="inline-form"
-              onsubmit="return confirm('Удалить модуль {{ m.name }} и все его данные?')">
+              data-confirm="Удалить модуль {{ m.name }} и все его данные?">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
           <input type="hidden" name="module_id" value="{{ m.id }}">
           <button type="submit" class="btn-delete">Удалить</button>
@@ -109,7 +112,7 @@
       <li>
         <span>{{ st.name }}</span>
         <form method="post" action="/admin/delete-stream" class="inline-form"
-              onsubmit="return confirm('Удалить поток {{ st.name }}? Ученики останутся без потока.')">
+              data-confirm="Удалить поток {{ st.name }}? Ученики останутся без потока.">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
           <input type="hidden" name="stream_id" value="{{ st.id }}">
           <button type="submit" class="btn-delete">Удалить</button>
@@ -122,7 +125,7 @@
   <section class="manage-students stream-selector">
     <h2>Поток</h2>
     <form method="get" action="/admin">
-      <select name="stream" class="student-input" onchange="this.form.submit()">
+      <select name="stream" class="student-input" data-autosubmit>
         <option value="" {{ 'selected' if not selected_stream }}>— выберите поток —</option>
         <option value="all" {{ 'selected' if selected_stream == 'all' }}>Все потоки</option>
         {% for st in streams %}
