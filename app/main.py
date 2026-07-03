@@ -1,4 +1,5 @@
 import time
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -21,16 +22,18 @@ from app.auth import (
 
 WEEKS_PER_MODULE = 4
 
-app = FastAPI(title="Учебный журнал | проект «ПЕКАРНЯ»")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    yield
+
+
+app = FastAPI(title="Учебный журнал | проект «ПЕКАРНЯ»", lifespan=lifespan)
 
 _base = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(_base / "templates"))
 app.mount("/static", StaticFiles(directory=str(_base / "static")), name="static")
-
-
-@app.on_event("startup")
-def on_startup() -> None:
-    init_db()
 
 
 def _client_ip(request: Request) -> str:
