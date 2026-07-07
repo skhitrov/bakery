@@ -1,8 +1,8 @@
-"""Module management (admin only)."""
+"""Module management (teacher only)."""
 
 
 def test_add_module_increments_position(client, make_user, login, csrf, query):
-    aid = make_user("admin", "boss@test.ru")
+    aid = make_user("teacher", "boss@test.ru")
     login("boss@test.ru")
     for name in ("Октябрь", "Ноябрь"):
         r = client.post(
@@ -16,7 +16,7 @@ def test_add_module_increments_position(client, make_user, login, csrf, query):
 
 
 def test_delete_module_removes_records(client, make_user, make_module, make_student, login, csrf, query):
-    aid = make_user("admin", "boss@test.ru")
+    aid = make_user("teacher", "boss@test.ru")
     mid = make_module("Сентябрь")
     stud = make_student("Ученик")
     from app.database import get_db
@@ -37,7 +37,7 @@ def test_delete_module_removes_records(client, make_user, make_module, make_stud
 
 
 def test_add_module_bad_csrf_forbidden(client, make_user, login, query):
-    make_user("admin", "boss@test.ru")
+    make_user("teacher", "boss@test.ru")
     login("boss@test.ru")
     r = client.post(
         "/admin/add-module",

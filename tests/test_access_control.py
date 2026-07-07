@@ -30,15 +30,45 @@ def test_staff_can_open_admin(client, make_user, login, role):
     assert r.status_code == 200
 
 
-# --- admin-only mutations reject teachers (guard runs before CSRF) ---
+# --- grid editing (/admin/save) is curator (admin role) only: reject teachers ---
 
-@pytest.mark.parametrize("path", ["/admin/save", "/admin/add-module", "/admin/add-stream", "/admin/delete-module", "/admin/delete-stream"])
+@pytest.mark.parametrize("path", ["/admin/save"])
 def test_teacher_blocked_from_admin_only_posts(client, make_user, login, path):
     make_user("teacher", "teach@test.ru")
     login("teach@test.ru")
     r = client.post(path, data={}, follow_redirects=False)
     assert r.status_code == 303
     assert r.headers["location"] == "/login"
+
+
+# --- module/cohort management moved to teacher: the curator (admin role) is now blocked ---
+
+@pytest.mark.parametrize(
+    "path",
+    ["/admin/add-module", "/admin/add-stream", "/admin/delete-module", "/admin/delete-stream"],
+)
+def test_curator_blocked_from_structure_posts(client, make_user, login, path):
+    make_user("admin", "boss@test.ru")
+    login("boss@test.ru")
+    r = client.post(path, data={}, follow_redirects=False)
+    assert r.status_code == 303
+    assert r.headers["location"] == "/login"
+
+
+def test_module_cohort_management_shown_to_teacher_not_curator(client, make_user, login):
+    # Teacher (admin@bulochka.ru) now manages modules + cohorts...
+    make_user("teacher", "teach@test.ru")
+    login("teach@test.ru")
+    r = client.get("/admin")
+    assert "Управление модулями" in r.text
+    assert "Управление цехами" in r.text
+
+    # ...and the curator (admin role) no longer sees those sections.
+    make_user("admin", "cur@test.ru")
+    login("cur@test.ru")
+    r2 = client.get("/admin")
+    assert "Управление модулями" not in r2.text
+    assert "Управление цехами" not in r2.text
 
 
 def test_parent_blocked_from_add_student(client, make_user, login):

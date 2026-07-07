@@ -269,7 +269,7 @@ async def admin_delete_curator(request: Request):
 @app.post("/admin/add-module")
 async def admin_add_module(request: Request):
     user = get_current_user(request)
-    if not user or user["role"] != "admin":
+    if not user or user["role"] != "teacher":
         return RedirectResponse("/login", status_code=303)
 
     form = await request.form()
@@ -292,7 +292,7 @@ async def admin_add_module(request: Request):
 @app.post("/admin/delete-module")
 async def admin_delete_module(request: Request):
     user = get_current_user(request)
-    if not user or user["role"] != "admin":
+    if not user or user["role"] != "teacher":
         return RedirectResponse("/login", status_code=303)
 
     form = await request.form()
@@ -311,7 +311,7 @@ async def admin_delete_module(request: Request):
 @app.post("/admin/add-stream")
 async def admin_add_stream(request: Request):
     user = get_current_user(request)
-    if not user or user["role"] != "admin":
+    if not user or user["role"] != "teacher":
         return RedirectResponse("/login", status_code=303)
 
     form = await request.form()
@@ -334,7 +334,7 @@ async def admin_add_stream(request: Request):
 @app.post("/admin/delete-stream")
 async def admin_delete_stream(request: Request):
     user = get_current_user(request)
-    if not user or user["role"] != "admin":
+    if not user or user["role"] != "teacher":
         return RedirectResponse("/login", status_code=303)
 
     form = await request.form()

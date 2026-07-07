@@ -44,6 +44,50 @@
   </section>
 
   <section class="manage-students">
+    <h2>Управление модулями</h2>
+    <form method="post" action="/admin/add-module" class="add-student-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="text" name="module_name" placeholder="Название месяца (например, Октябрь)" required class="student-input">
+      <button type="submit" class="btn btn-small btn-add">Добавить</button>
+    </form>
+    <ul class="student-list">
+      {% for m in modules %}
+      <li>
+        <span>{{ m.name }}</span>
+        <form method="post" action="/admin/delete-module" class="inline-form"
+              data-confirm="Удалить модуль {{ m.name }} и все его данные?">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="module_id" value="{{ m.id }}">
+          <button type="submit" class="btn-delete">Удалить</button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="manage-students">
+    <h2>Управление цехами</h2>
+    <form method="post" action="/admin/add-stream" class="add-student-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="text" name="stream_name" placeholder="Название цеха (например, Цех 3)" required class="student-input">
+      <button type="submit" class="btn btn-small btn-add">Добавить</button>
+    </form>
+    <ul class="student-list">
+      {% for st in streams %}
+      <li>
+        <span>{{ st.name }}</span>
+        <form method="post" action="/admin/delete-stream" class="inline-form"
+              data-confirm="Удалить цех {{ st.name }}? Ученики останутся без цеха.">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="stream_id" value="{{ st.id }}">
+          <button type="submit" class="btn-delete">Удалить</button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="manage-students">
     <h2>Управление учениками</h2>
     <form method="post" action="/admin/add-student" class="add-student-grid">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -117,50 +161,6 @@
   {% endif %}
 
   {% if user.role == 'admin' %}
-  <section class="manage-students">
-    <h2>Управление модулями</h2>
-    <form method="post" action="/admin/add-module" class="add-student-form">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <input type="text" name="module_name" placeholder="Название месяца (например, Октябрь)" required class="student-input">
-      <button type="submit" class="btn btn-small btn-add">Добавить</button>
-    </form>
-    <ul class="student-list">
-      {% for m in modules %}
-      <li>
-        <span>{{ m.name }}</span>
-        <form method="post" action="/admin/delete-module" class="inline-form"
-              data-confirm="Удалить модуль {{ m.name }} и все его данные?">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-          <input type="hidden" name="module_id" value="{{ m.id }}">
-          <button type="submit" class="btn-delete">Удалить</button>
-        </form>
-      </li>
-      {% endfor %}
-    </ul>
-  </section>
-
-  <section class="manage-students">
-    <h2>Управление цехами</h2>
-    <form method="post" action="/admin/add-stream" class="add-student-form">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <input type="text" name="stream_name" placeholder="Название цеха (например, Цех 3)" required class="student-input">
-      <button type="submit" class="btn btn-small btn-add">Добавить</button>
-    </form>
-    <ul class="student-list">
-      {% for st in streams %}
-      <li>
-        <span>{{ st.name }}</span>
-        <form method="post" action="/admin/delete-stream" class="inline-form"
-              data-confirm="Удалить цех {{ st.name }}? Ученики останутся без цеха.">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-          <input type="hidden" name="stream_id" value="{{ st.id }}">
-          <button type="submit" class="btn-delete">Удалить</button>
-        </form>
-      </li>
-      {% endfor %}
-    </ul>
-  </section>
-
   <section class="manage-students stream-selector">
     <h2>Цех</h2>
     <form method="get" action="/admin">

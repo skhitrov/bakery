@@ -1,8 +1,8 @@
-"""Цех (stream) management (admin only)."""
+"""Цех (stream) management (teacher only)."""
 
 
 def test_add_stream_increments_position(client, make_user, login, csrf, query):
-    aid = make_user("admin", "boss@test.ru")
+    aid = make_user("teacher", "boss@test.ru")
     login("boss@test.ru")
     for name in ("Цех 1", "Цех 2"):
         r = client.post(
@@ -16,7 +16,7 @@ def test_add_stream_increments_position(client, make_user, login, csrf, query):
 
 
 def test_delete_stream_unassigns_students_but_keeps_them(client, make_user, make_stream, make_student, login, csrf, query):
-    aid = make_user("admin", "boss@test.ru")
+    aid = make_user("teacher", "boss@test.ru")
     sid = make_stream("Цех 1", 1)
     stud = make_student("Остаётся", stream_id=sid)
     login("boss@test.ru")
@@ -35,7 +35,7 @@ def test_delete_stream_unassigns_students_but_keeps_them(client, make_user, make
 
 
 def test_add_stream_bad_csrf_forbidden(client, make_user, login, query):
-    make_user("admin", "boss@test.ru")
+    make_user("teacher", "boss@test.ru")
     login("boss@test.ru")
     r = client.post(
         "/admin/add-stream",

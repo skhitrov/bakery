@@ -32,10 +32,10 @@ diary.db         — SQLite database (auto-created on first run, gitignored)
 
 **Request flow:** all pages are server-rendered HTML (Jinja2). No SPA, no JS framework. Auth is a cookie-based session (`session`) signed with itsdangerous (httponly, samesite=strict, 1-day max-age).
 
-**Roles & permissions** (three roles — this is the key model to get right):
+**Roles & permissions** (three roles — this is the key model to get right; note the **code role names are inverted vs the UI labels**: the `teacher` account shows as "admin" in the header — e.g. `admin@bulochka.ru` — while the `admin` account shows as "Куратор" — e.g. `curator@test.ru`):
 - **parent** — sees only their own children's diary at `/diary` (read-only).
-- **teacher** — sees the `/admin` roster; can add/delete students, create parent accounts, and reset parent passwords. **Cannot** edit weekly records or manage modules.
-- **admin** (curator) — everything a teacher can do, **plus** editing the weekly-records grid (`/admin/save`) and adding/deleting modules. The admin grid is only rendered for `role == "admin"`.
+- **teacher** (the *structural administrator*, shown as "admin") — sees the `/admin` roster and manages everything structural: add/delete students, create parent accounts and reset their passwords, manage **curators** (`/admin/add-curator`, `/admin/delete-curator`), **modules** (`/admin/add-module`, `/admin/delete-module`), and **cohorts «Цех»/streams** (`/admin/add-stream`, `/admin/delete-stream`), plus reassign a student's Цех (`/admin/change-stream`). **Cannot** edit the weekly-records grid.
+- **admin** (curator, shown as "Куратор") — fills in the **weekly-records grid** (`/admin/save`) for a Цех selected via the roster selector; the grid is only rendered for `role == "admin"`. Does **not** manage students, curators, modules, or cohorts.
 
 Route guards live inline at the top of each handler in `main.py` (check `get_current_user` + role, else redirect to `/login`). `/` redirects parents to `/diary` and staff to `/admin`.
 
