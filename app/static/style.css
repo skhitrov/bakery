@@ -374,6 +374,13 @@ select.student-input {
   min-width: 0;
 }
 
+/* Match the height of the data rows, whose 44px .btn-delete («Удалить») sets
+   the row height — enlarge the add-row's controls to the same 44px. */
+.teacher-table .add-student-row .student-input,
+.teacher-table .add-student-row .btn {
+  min-height: 44px;
+}
+
 .password-cell {
   min-width: 250px;
 }
