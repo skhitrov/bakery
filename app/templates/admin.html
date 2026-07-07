@@ -17,6 +17,33 @@
 
   {% if user.role == 'teacher' %}
   <section class="manage-students">
+    <h2>Управление кураторами</h2>
+    {% if error == 'curator_exists' %}
+    <div class="alert alert-error">Пользователь с таким email уже существует.</div>
+    {% endif %}
+    <form method="post" action="/admin/add-curator" class="add-student-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="text" name="full_name" placeholder="ФИО куратора" required class="student-input">
+      <input type="email" name="email" placeholder="Email куратора" required class="student-input">
+      <input type="password" name="password" placeholder="Пароль" required class="student-input">
+      <button type="submit" class="btn btn-small btn-add">Добавить</button>
+    </form>
+    <ul class="student-list">
+      {% for c in curators %}
+      <li>
+        <span>{{ c.full_name }} ({{ c.email }})</span>
+        <form method="post" action="/admin/delete-curator" class="inline-form"
+              data-confirm="Удалить куратора {{ c.full_name }}?">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="user_id" value="{{ c.id }}">
+          <button type="submit" class="btn-delete">Удалить</button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="manage-students">
     <h2>Управление учениками</h2>
     <form method="post" action="/admin/add-student" class="add-student-grid">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">

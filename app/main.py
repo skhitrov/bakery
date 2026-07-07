@@ -190,6 +190,57 @@ async def admin_delete_student(request: Request):
     return RedirectResponse("/admin", status_code=303)
 
 
+@app.post("/admin/add-curator")
+async def admin_add_curator(request: Request):
+    user = get_current_user(request)
+    if not user or user["role"] != "teacher":
+        return RedirectResponse("/login", status_code=303)
+
+    form = await request.form()
+    if not _check_csrf(request, form, user):
+        return _csrf_error()
+
+    full_name = (form.get("full_name") or "").strip()
+    email = (form.get("email") or "").strip()
+    password = form.get("password") or ""
+    if not full_name or not email:
+        return RedirectResponse("/admin", status_code=303)
+    if not (MIN_PASSWORD_LENGTH <= len(password) <= MAX_PASSWORD_LENGTH):
+        return RedirectResponse("/admin", status_code=303)
+
+    with get_db() as conn:
+        existing = conn.execute(
+            "SELECT id FROM users WHERE email = ?", (email,)
+        ).fetchone()
+        if existing:
+            return RedirectResponse("/admin?error=curator_exists", status_code=303)
+        conn.execute(
+            "INSERT INTO users (email, password, role, full_name) VALUES (?, ?, 'admin', ?)",
+            (email, hash_password(password), full_name),
+        )
+    return RedirectResponse("/admin", status_code=303)
+
+
+@app.post("/admin/delete-curator")
+async def admin_delete_curator(request: Request):
+    user = get_current_user(request)
+    if not user or user["role"] != "teacher":
+        return RedirectResponse("/login", status_code=303)
+
+    form = await request.form()
+    if not _check_csrf(request, form, user):
+        return _csrf_error()
+
+    curator_id = _form_int(form, "user_id")
+    if curator_id is None:
+        return RedirectResponse("/admin", status_code=303)
+    with get_db() as conn:
+        # The role='admin' clause scopes deletion to curators only, so this
+        # endpoint can never remove a parent or teacher account.
+        conn.execute("DELETE FROM users WHERE id = ? AND role = 'admin'", (curator_id,))
+    return RedirectResponse("/admin", status_code=303)
+
+
 @app.post("/admin/add-module")
 async def admin_add_module(request: Request):
     user = get_current_user(request)
@@ -417,6 +468,11 @@ async def admin_page(request: Request, error: str = "", stream: str = ""):
         ).fetchall()
         streams = [dict(s) for s in streams]
 
+        curators = conn.execute(
+            "SELECT id, email, full_name FROM users WHERE role = 'admin' ORDER BY full_name"
+        ).fetchall()
+        curators = [dict(c) for c in curators]
+
         modules = conn.execute(
             "SELECT * FROM modules ORDER BY position"
         ).fetchall()
@@ -462,9 +518,11 @@ async def admin_page(request: Request, error: str = "", stream: str = ""):
             "modules": modules,
             "students": students,
             "streams": streams,
+            "curators": curators,
             "selected_stream": stream,
             "csrf_token": csrf_token,
             "conflict_error": conflict_error,
+            "error": error,
         },
     )
 
