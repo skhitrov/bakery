@@ -89,19 +89,10 @@
 
   <section class="manage-students">
     <h2>Управление учениками</h2>
-    <form method="post" action="/admin/add-student" class="add-student-grid">
+    <!-- The add-student controls live in the first table row (associated via the
+         form= attribute) so they line up with the roster columns as one table. -->
+    <form id="add-student-form" method="post" action="/admin/add-student">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <input type="text" name="full_name" placeholder="Фамилия Имя ученика" required class="student-input">
-      <select name="stream_id" required class="student-input">
-        <option value="" disabled selected>— цех —</option>
-        {% for st in streams %}
-        <option value="{{ st.id }}">{{ st.name }}</option>
-        {% endfor %}
-      </select>
-      <input type="text" name="parent_name" placeholder="ФИО родителя" required class="student-input">
-      <input type="email" name="parent_email" placeholder="Email родителя" required class="student-input">
-      <input type="password" name="parent_password" placeholder="Пароль родителя" required class="student-input">
-      <button type="submit" class="btn btn-small btn-add">Добавить</button>
     </form>
     <div class="table-wrapper">
       <table class="week-table teacher-table">
@@ -116,6 +107,21 @@
           </tr>
         </thead>
         <tbody>
+          <tr class="add-student-row">
+            <td><input form="add-student-form" type="text" name="full_name" placeholder="Фамилия Имя ученика" required class="student-input"></td>
+            <td>
+              <select form="add-student-form" name="stream_id" required class="student-input">
+                <option value="" disabled selected>— цех —</option>
+                {% for st in streams %}
+                <option value="{{ st.id }}">{{ st.name }}</option>
+                {% endfor %}
+              </select>
+            </td>
+            <td><input form="add-student-form" type="text" name="parent_name" placeholder="ФИО родителя" required class="student-input"></td>
+            <td><input form="add-student-form" type="email" name="parent_email" placeholder="Email родителя" required class="student-input"></td>
+            <td><input form="add-student-form" type="password" name="parent_password" placeholder="Пароль родителя" required class="student-input"></td>
+            <td><button form="add-student-form" type="submit" class="btn btn-small btn-add">Добавить</button></td>
+          </tr>
           {% for s in students %}
           <tr>
             <td>{{ s.full_name }}</td>

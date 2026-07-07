@@ -357,17 +357,6 @@ select.student-input {
   text-decoration: underline;
 }
 
-/* === Teacher: Add Student Grid Form === */
-.add-student-grid {
-  display: grid;
-  /* minmax(0, 1fr) lets the input columns shrink below their intrinsic width;
-     plain 1fr keeps an implicit `auto` minimum, which overflows the section and
-     pushes the trailing "Добавить" button out past the table's right edge. */
-  grid-template-columns: repeat(5, minmax(0, 1fr)) auto;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-
 /* === Teacher Table === */
 .teacher-table {
   width: 100%;
@@ -376,6 +365,13 @@ select.student-input {
 .teacher-table td {
   text-align: left;
   white-space: nowrap;
+}
+
+/* Add-student row: inputs/select fill their column so the form lines up with
+   the roster as one table. */
+.teacher-table .add-student-row .student-input {
+  width: 100%;
+  min-width: 0;
 }
 
 .password-cell {
@@ -523,10 +519,6 @@ select.student-input {
 
   .add-student-form {
     flex-direction: column;
-  }
-
-  .add-student-grid {
-    grid-template-columns: 1fr;
   }
 
   .teacher-table {

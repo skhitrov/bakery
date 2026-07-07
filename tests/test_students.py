@@ -280,6 +280,20 @@ def test_teacher_roster_renders_stream_change_control(
     assert "Сменить" in r.text
 
 
+def test_add_student_form_is_part_of_roster_table(client, make_user, make_stream, login):
+    make_user("teacher", "t@test.ru")
+    make_stream("Цех 1", 1)
+    login("t@test.ru")
+    r = client.get("/admin")
+    assert r.status_code == 200
+    # The add-student <form> is a shell; its controls live in a table row and are
+    # bound to it via form= so they line up with the roster columns.
+    assert 'id="add-student-form"' in r.text
+    assert 'form="add-student-form"' in r.text
+    assert 'class="add-student-row"' in r.text
+    assert 'name="full_name"' in r.text
+
+
 def test_add_student_bad_csrf_forbidden(client, make_user, login, query):
     make_user("teacher", "t@test.ru")
     login("t@test.ru")
