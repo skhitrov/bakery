@@ -133,6 +133,56 @@ def test_change_password_cannot_target_staff(client, make_user, login, csrf):
     assert authenticate("boss@test.ru", "hijacked1") is None
 
 
+def test_moving_student_between_cohorts_keeps_all_records(
+    client, make_user, make_stream, make_module, make_student, login, query
+):
+    """Moving a student to another Цех must carry ALL their data with them.
+
+    weekly_records are keyed by student_id (no stream_id column), so a move is just
+    `UPDATE students SET stream_id = ?` and every record follows automatically —
+    nothing to migrate. This test encodes that invariant.
+    """
+    make_user("admin", "curator@test.ru")  # only the curator renders the grid
+    ceh1 = make_stream("Цех 1", 1)
+    ceh2 = make_stream("Цех 2", 2)
+    mid = make_module("Сентябрь")
+    stud = make_student("Переводимый Ученик", stream_id=ceh1)
+
+    from app.database import get_db
+
+    # Give the student a fully-populated record while in Цех 1.
+    with get_db() as conn:
+        conn.execute(
+            "INSERT INTO weekly_records "
+            "(student_id, module_id, week_number, theory, practice, hw1, comment, updated_at) "
+            "VALUES (?, ?, 1, 1, 1, 1, 'важный комментарий', 123.0)",
+            (stud, mid),
+        )
+
+    # --- The move: student_id is untouched, only stream_id changes. ---
+    with get_db() as conn:
+        conn.execute("UPDATE students SET stream_id = ? WHERE id = ?", (ceh2, stud))
+
+    # 1. Records are intact, still linked to the same student.
+    recs = query(
+        "SELECT week_number, theory, practice, hw1, comment FROM weekly_records WHERE student_id = ?",
+        (stud,),
+    )
+    assert len(recs) == 1
+    assert recs[0]["theory"] == 1 and recs[0]["practice"] == 1 and recs[0]["hw1"] == 1
+    assert recs[0]["comment"] == "важный комментарий"
+
+    login("curator@test.ru")
+    # 2. The grid now shows the student AND their data under Цех 2...
+    r2 = client.get("/admin", params={"stream": ceh2})
+    assert "Переводимый Ученик" in r2.text
+    assert "важный комментарий" in r2.text  # the record moved with the student
+
+    # 3. ...and no longer under Цех 1.
+    r1 = client.get("/admin", params={"stream": ceh1})
+    assert "Переводимый Ученик" not in r1.text
+
+
 def test_add_student_bad_csrf_forbidden(client, make_user, login, query):
     make_user("teacher", "t@test.ru")
     login("t@test.ru")
