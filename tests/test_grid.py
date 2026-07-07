@@ -1,4 +1,4 @@
-"""Curator grid: Поток filtering, saving, save-isolation, optimistic concurrency."""
+"""Curator grid: Цех filtering, saving, save-isolation, optimistic concurrency."""
 
 import pytest
 
@@ -8,8 +8,8 @@ def grid_setup(make_user, make_module, make_stream, make_student):
     """An admin, one module, two streams each with one student."""
     admin_id = make_user("admin", "boss@test.ru")
     mid = make_module("Сентябрь")
-    s1 = make_stream("Поток 1", 1)
-    s2 = make_stream("Поток 2", 2)
+    s1 = make_stream("Цех 1", 1)
+    s2 = make_stream("Цех 2", 2)
     a = make_student("Первый Ученик", stream_id=s1)
     b = make_student("Второй Ученик", stream_id=s2)
     return {"admin_id": admin_id, "mid": mid, "s1": s1, "s2": s2, "a": a, "b": b}
@@ -22,7 +22,7 @@ def test_no_selection_hides_grid_shows_hint(client, grid_setup, login):
     r = client.get("/admin")
     assert r.status_code == 200
     assert "admin-table" not in r.text
-    assert "Выберите поток" in r.text
+    assert "Выберите цех" in r.text
 
 
 def test_stream_filter_shows_only_that_cohort(client, grid_setup, login):
@@ -64,10 +64,10 @@ def test_save_writes_cells(client, grid_setup, login, csrf, query):
 
 
 def test_save_is_isolated_between_streams(client, grid_setup, login, csrf, query):
-    """Saving Поток 1 must not alter Поток 2's records — the critical invariant."""
+    """Saving Цех 1 must not alter Цех 2's records — the critical invariant."""
     g = grid_setup
     from app.database import get_db
-    # Give Поток 2's student a known, complete record.
+    # Give Цех 2's student a known, complete record.
     with get_db() as conn:
         conn.execute(
             "INSERT INTO weekly_records "
@@ -79,7 +79,7 @@ def test_save_is_isolated_between_streams(client, grid_setup, login, csrf, query
         "SELECT theory, practice, hw1, comment FROM weekly_records WHERE student_id=?",
         (g["b"],),
     )
-    # Save Поток 1 (submits only Поток 1's cells).
+    # Save Цех 1 (submits only Цех 1's cells).
     p = f"m{g['mid']}_w1_s{g['a']}_"
     login("boss@test.ru")
     r = client.post(

@@ -478,7 +478,7 @@ async def admin_page(request: Request, error: str = "", stream: str = ""):
         ).fetchall()
         modules = [dict(m) for m in modules]
 
-        # The curator grid is scoped to the selected Поток (cohort).
+        # The curator grid is scoped to the selected Цех (cohort).
         grid_students = []
         if user["role"] == "admin" and stream:
             if stream == "all":
@@ -550,7 +550,7 @@ async def admin_save(request: Request):
 
         modules = conn.execute("SELECT id FROM modules").fetchall()
         # Only touch the cohort that was rendered — otherwise unrendered cells
-        # for other Потоки would post as 0/"" and wipe their records.
+        # for other Цеха would post as 0/"" and wipe their records.
         if stream == "all":
             students = conn.execute("SELECT id FROM students").fetchall()
         elif stream.isdigit():

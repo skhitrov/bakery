@@ -49,7 +49,7 @@
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <input type="text" name="full_name" placeholder="Фамилия Имя ученика" required class="student-input">
       <select name="stream_id" required class="student-input">
-        <option value="" disabled selected>— поток —</option>
+        <option value="" disabled selected>— цех —</option>
         {% for st in streams %}
         <option value="{{ st.id }}">{{ st.name }}</option>
         {% endfor %}
@@ -64,7 +64,7 @@
         <thead>
           <tr>
             <th>Ученик</th>
-            <th>Поток</th>
+            <th>Цех</th>
             <th>Родитель</th>
             <th>Email</th>
             <th>Новый пароль</th>
@@ -128,10 +128,10 @@
   </section>
 
   <section class="manage-students">
-    <h2>Управление потоками</h2>
+    <h2>Управление цехами</h2>
     <form method="post" action="/admin/add-stream" class="add-student-form">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <input type="text" name="stream_name" placeholder="Название потока (например, Поток 3)" required class="student-input">
+      <input type="text" name="stream_name" placeholder="Название цеха (например, Цех 3)" required class="student-input">
       <button type="submit" class="btn btn-small btn-add">Добавить</button>
     </form>
     <ul class="student-list">
@@ -139,7 +139,7 @@
       <li>
         <span>{{ st.name }}</span>
         <form method="post" action="/admin/delete-stream" class="inline-form"
-              data-confirm="Удалить поток {{ st.name }}? Ученики останутся без потока.">
+              data-confirm="Удалить цех {{ st.name }}? Ученики останутся без цеха.">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
           <input type="hidden" name="stream_id" value="{{ st.id }}">
           <button type="submit" class="btn-delete">Удалить</button>
@@ -150,11 +150,11 @@
   </section>
 
   <section class="manage-students stream-selector">
-    <h2>Поток</h2>
+    <h2>Цех</h2>
     <form method="get" action="/admin">
       <select name="stream" class="student-input" data-autosubmit>
-        <option value="" {{ 'selected' if not selected_stream }}>— выберите поток —</option>
-        <option value="all" {{ 'selected' if selected_stream == 'all' }}>Все потоки</option>
+        <option value="" {{ 'selected' if not selected_stream }}>— выберите цех —</option>
+        <option value="all" {{ 'selected' if selected_stream == 'all' }}>Все цеха</option>
         {% for st in streams %}
         <option value="{{ st.id }}" {{ 'selected' if selected_stream == st.id|string }}>{{ st.name }}</option>
         {% endfor %}
@@ -170,9 +170,9 @@
   {% endif %}
 
   {% if not selected_stream %}
-  <p class="hint">Выберите поток, чтобы увидеть журнал.</p>
+  <p class="hint">Выберите цех, чтобы увидеть журнал.</p>
   {% elif not module_data %}
-  <p class="hint">В этом потоке пока нет учеников.</p>
+  <p class="hint">В этом цехе пока нет учеников.</p>
   {% endif %}
 
   <form method="post" action="/admin/save">

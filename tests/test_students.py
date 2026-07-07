@@ -3,7 +3,7 @@
 
 def test_add_student_creates_parent_and_assigns_stream(client, make_user, make_stream, login, csrf, query):
     tid = make_user("teacher", "t@test.ru")
-    sid = make_stream("Поток 1", 1)
+    sid = make_stream("Цех 1", 1)
     login("t@test.ru")
     r = client.post(
         "/admin/add-student",
@@ -69,7 +69,7 @@ def test_add_student_rejects_short_parent_password(client, make_user, login, csr
 
 def test_add_student_without_parent(client, make_user, make_stream, login, csrf, query):
     tid = make_user("teacher", "t@test.ru")
-    sid = make_stream("Поток 1", 1)
+    sid = make_stream("Цех 1", 1)
     login("t@test.ru")
     r = client.post(
         "/admin/add-student",

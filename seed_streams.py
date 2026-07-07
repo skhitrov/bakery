@@ -1,7 +1,7 @@
-"""Idempotently add Потоки (streams) and demo students split across them.
+"""Idempotently add Цеха (streams) and demo students split across them.
 
 Safe to re-run: streams are get-or-created by name, existing students are
-assigned to Поток 1 only while still unassigned, and new families are skipped
+assigned to Цех 1 only while still unassigned, and new families are skipped
 if their email already exists.
 """
 
@@ -20,10 +20,10 @@ def get_or_create_stream(conn, name: str, position: int) -> int:
 def seed_streams() -> None:
     init_db()  # ensures streams table + students.stream_id exist (runs migration)
     with get_db() as conn:
-        s1 = get_or_create_stream(conn, "Поток 1", 1)
-        s2 = get_or_create_stream(conn, "Поток 2", 2)
+        s1 = get_or_create_stream(conn, "Цех 1", 1)
+        s2 = get_or_create_stream(conn, "Цех 2", 2)
 
-        # Assign the 3 existing seed students to Поток 1 (only if still unassigned)
+        # Assign the 3 existing seed students to Цех 1 (only if still unassigned)
         for name in ("Петров Ваня", "Сидорова Маша", "Кузнецов Артём"):
             conn.execute(
                 "UPDATE students SET stream_id = ? WHERE full_name = ? AND stream_id IS NULL",
@@ -74,8 +74,8 @@ def seed_streams() -> None:
             added += 1
 
     print(f"Streams ready. Added {added} new student(s) this run.")
-    print("Поток 1: Петров Ваня, Сидорова Маша, Кузнецов Артём, Волков Дима, Морозова Аня")
-    print("Поток 2: Новиков Егор, Смирнова Вика, Попов Максим, Лебедева Соня")
+    print("Цех 1: Петров Ваня, Сидорова Маша, Кузнецов Артём, Волков Дима, Морозова Аня")
+    print("Цех 2: Новиков Егор, Смирнова Вика, Попов Максим, Лебедева Соня")
     print("New parents (all pass123): volkov@, morozova@, novikov@, smirnova@, popov@, lebedeva@ mail.ru")
 
 

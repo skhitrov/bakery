@@ -1,10 +1,10 @@
-"""Поток (stream) management (admin only)."""
+"""Цех (stream) management (admin only)."""
 
 
 def test_add_stream_increments_position(client, make_user, login, csrf, query):
     aid = make_user("admin", "boss@test.ru")
     login("boss@test.ru")
-    for name in ("Поток 1", "Поток 2"):
+    for name in ("Цех 1", "Цех 2"):
         r = client.post(
             "/admin/add-stream",
             data={"csrf_token": csrf(aid), "stream_name": name},
@@ -12,12 +12,12 @@ def test_add_stream_increments_position(client, make_user, login, csrf, query):
         )
         assert r.status_code == 303
     rows = query("SELECT name, position FROM streams ORDER BY position")
-    assert [(r["name"], r["position"]) for r in rows] == [("Поток 1", 1), ("Поток 2", 2)]
+    assert [(r["name"], r["position"]) for r in rows] == [("Цех 1", 1), ("Цех 2", 2)]
 
 
 def test_delete_stream_unassigns_students_but_keeps_them(client, make_user, make_stream, make_student, login, csrf, query):
     aid = make_user("admin", "boss@test.ru")
-    sid = make_stream("Поток 1", 1)
+    sid = make_stream("Цех 1", 1)
     stud = make_student("Остаётся", stream_id=sid)
     login("boss@test.ru")
     r = client.post(
