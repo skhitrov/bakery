@@ -190,6 +190,31 @@ async def admin_delete_student(request: Request):
     return RedirectResponse("/admin", status_code=303)
 
 
+@app.post("/admin/change-stream")
+async def admin_change_stream(request: Request):
+    user = get_current_user(request)
+    if not user or user["role"] != "teacher":
+        return RedirectResponse("/login", status_code=303)
+
+    form = await request.form()
+    if not _check_csrf(request, form, user):
+        return _csrf_error()
+
+    student_id = _form_int(form, "student_id")
+    stream_id = _form_int(form, "stream_id")
+    if student_id is None or stream_id is None:
+        return RedirectResponse("/admin", status_code=303)
+    with get_db() as conn:
+        # Only reassign to a stream that exists — a clean no-op redirect rather
+        # than a foreign-key IntegrityError. weekly_records are keyed by
+        # student_id, so they follow the student automatically (nothing to move).
+        if conn.execute("SELECT 1 FROM streams WHERE id = ?", (stream_id,)).fetchone():
+            conn.execute(
+                "UPDATE students SET stream_id = ? WHERE id = ?", (stream_id, student_id)
+            )
+    return RedirectResponse("/admin", status_code=303)
+
+
 @app.post("/admin/add-curator")
 async def admin_add_curator(request: Request):
     user = get_current_user(request)

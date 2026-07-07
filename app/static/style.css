@@ -403,6 +403,23 @@ select.student-input {
   box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
 }
 
+.stream-form {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.stream-select {
+  flex: 1;
+  min-width: 0;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.85rem;
+  background: #fff;
+  cursor: pointer;
+}
+
 /* === Admin Table === */
 .admin-table .student-cell {
   text-align: left;

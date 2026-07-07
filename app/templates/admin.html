@@ -75,7 +75,19 @@
           {% for s in students %}
           <tr>
             <td>{{ s.full_name }}</td>
-            <td>{{ s.stream_name or '—' }}</td>
+            <td>
+              <form method="post" action="/admin/change-stream" class="stream-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="student_id" value="{{ s.id }}">
+                <select name="stream_id" class="stream-select" required>
+                  <option value="" disabled {{ 'selected' if not s.stream_id }}>— цех —</option>
+                  {% for st in streams %}
+                  <option value="{{ st.id }}" {{ 'selected' if s.stream_id == st.id }}>{{ st.name }}</option>
+                  {% endfor %}
+                </select>
+                <button type="submit" class="btn btn-small btn-add">Сменить</button>
+              </form>
+            </td>
             <td>{{ s.parent_name or '—' }}</td>
             <td>{{ s.parent_email or '—' }}</td>
             <td class="password-cell">

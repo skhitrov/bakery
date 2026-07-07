@@ -183,6 +183,103 @@ def test_moving_student_between_cohorts_keeps_all_records(
     assert "Переводимый Ученик" not in r1.text
 
 
+def test_change_stream_moves_student_and_keeps_records(
+    client, make_user, make_stream, make_module, make_student, login, csrf, query
+):
+    tid = make_user("teacher", "t@test.ru")
+    ceh1 = make_stream("Цех 1", 1)
+    ceh2 = make_stream("Цех 2", 2)
+    mid = make_module("Сентябрь")
+    stud = make_student("Переводимый", stream_id=ceh1)
+    from app.database import get_db
+
+    with get_db() as conn:
+        conn.execute(
+            "INSERT INTO weekly_records "
+            "(student_id, module_id, week_number, theory, comment, updated_at) "
+            "VALUES (?, ?, 1, 1, 'держись', 5.0)",
+            (stud, mid),
+        )
+    login("t@test.ru")
+    r = client.post(
+        "/admin/change-stream",
+        data={"csrf_token": csrf(tid), "student_id": str(stud), "stream_id": str(ceh2)},
+        follow_redirects=False,
+    )
+    assert r.status_code == 303
+    assert query("SELECT stream_id FROM students WHERE id = ?", (stud,))[0]["stream_id"] == ceh2
+    # Records followed the student (keyed by student_id, not stream).
+    recs = query("SELECT theory, comment FROM weekly_records WHERE student_id = ?", (stud,))
+    assert len(recs) == 1 and recs[0]["theory"] == 1 and recs[0]["comment"] == "держись"
+
+
+def test_change_stream_bad_csrf_forbidden(client, make_user, make_stream, make_student, login, query):
+    make_user("teacher", "t@test.ru")
+    ceh1 = make_stream("Цех 1", 1)
+    ceh2 = make_stream("Цех 2", 2)
+    stud = make_student("Остаётся", stream_id=ceh1)
+    login("t@test.ru")
+    r = client.post(
+        "/admin/change-stream",
+        data={"csrf_token": "bad", "student_id": str(stud), "stream_id": str(ceh2)},
+        follow_redirects=False,
+    )
+    assert r.status_code == 403
+    assert query("SELECT stream_id FROM students WHERE id = ?", (stud,))[0]["stream_id"] == ceh1
+
+
+def test_change_stream_rejects_nonexistent_stream(
+    client, make_user, make_stream, make_student, login, csrf, query
+):
+    tid = make_user("teacher", "t@test.ru")
+    ceh1 = make_stream("Цех 1", 1)
+    stud = make_student("Остаётся", stream_id=ceh1)
+    login("t@test.ru")
+    r = client.post(
+        "/admin/change-stream",
+        data={"csrf_token": csrf(tid), "student_id": str(stud), "stream_id": "99999"},
+        follow_redirects=False,
+    )
+    assert r.status_code == 303
+    # Bogus target stream is ignored — the student stays put.
+    assert query("SELECT stream_id FROM students WHERE id = ?", (stud,))[0]["stream_id"] == ceh1
+
+
+def test_admin_cannot_change_stream(
+    client, make_user, make_stream, make_student, login, csrf, query
+):
+    aid = make_user("admin", "boss@test.ru")
+    ceh1 = make_stream("Цех 1", 1)
+    ceh2 = make_stream("Цех 2", 2)
+    stud = make_student("Остаётся", stream_id=ceh1)
+    login("boss@test.ru")
+    r = client.post(
+        "/admin/change-stream",
+        data={"csrf_token": csrf(aid), "student_id": str(stud), "stream_id": str(ceh2)},
+        follow_redirects=False,
+    )
+    assert r.status_code == 303
+    assert r.headers["location"] == "/login"
+    # Teacher-only guard: the curator cannot move students.
+    assert query("SELECT stream_id FROM students WHERE id = ?", (stud,))[0]["stream_id"] == ceh1
+
+
+def test_teacher_roster_renders_stream_change_control(
+    client, make_user, make_stream, make_student, login
+):
+    make_user("teacher", "t@test.ru")
+    ceh1 = make_stream("Цех 1", 1)
+    make_stream("Цех 2", 2)
+    make_student("Ученик Один", stream_id=ceh1)
+    login("t@test.ru")
+    r = client.get("/admin")
+    assert r.status_code == 200
+    # The editable «Цех» cell renders with both cohorts as options.
+    assert 'action="/admin/change-stream"' in r.text
+    assert "Цех 1" in r.text and "Цех 2" in r.text
+    assert "Сменить" in r.text
+
+
 def test_add_student_bad_csrf_forbidden(client, make_user, login, query):
     make_user("teacher", "t@test.ru")
     login("t@test.ru")
