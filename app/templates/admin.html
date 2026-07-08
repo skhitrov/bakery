@@ -214,9 +214,7 @@
               <th>ДЗ 3</th>
               <th>ДЗ 4</th>
               <th>Тесты</th>
-              {% if md.module.name in ['Октябрь', 'Декабрь', 'Февраль', 'Апрель'] %}
               <th>Пробники</th>
-              {% endif %}
               <th>Комментарии</th>
             </tr>
           </thead>
@@ -233,9 +231,7 @@
               <td><input type="checkbox" name="{{ p }}hw3" {{ 'checked' if row.record.get('hw3') }}></td>
               <td><input type="checkbox" name="{{ p }}hw4" {{ 'checked' if row.record.get('hw4') }}></td>
               <td><input type="checkbox" name="{{ p }}test" {{ 'checked' if row.record.get('test') }}></td>
-              {% if md.module.name in ['Октябрь', 'Декабрь', 'Февраль', 'Апрель'] %}
               <td><textarea name="{{ p }}trial_exam" rows="5" class="comment-input" placeholder="...">{{ row.record.get('trial_exam', '') }}</textarea></td>
-              {% endif %}
               <td><textarea name="{{ p }}comment" rows="5" class="comment-input" placeholder="...">{{ row.record.get('comment', '') }}</textarea></td>
             </tr>
             {% endfor %}

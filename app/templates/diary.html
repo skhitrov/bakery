@@ -35,9 +35,7 @@
               <th>ДЗ 3</th>
               <th>ДЗ 4</th>
               <th>Тесты</th>
-              {% if md.module.name in ['Октябрь', 'Декабрь', 'Февраль', 'Апрель'] %}
               <th>Пробники</th>
-              {% endif %}
               <th>Комментарии</th>
             </tr>
           </thead>
@@ -62,9 +60,7 @@
               <td><span class="{{ 'check-yes' if week.get('hw3') else 'check-no' }}">{{ 'сдал' if week.get('hw3') else 'не сдал' }}</span></td>
               <td><span class="{{ 'check-yes' if week.get('hw4') else 'check-no' }}">{{ 'сдал' if week.get('hw4') else 'не сдал' }}</span></td>
               <td><span class="{{ 'check-yes' if week.get('test') else 'check-no' }}">{{ '✓' if week.get('test') else '—' }}</span></td>
-              {% if md.module.name in ['Октябрь', 'Декабрь', 'Февраль', 'Апрель'] %}
               <td class="comment">{{ week.get('trial_exam', '') }}</td>
-              {% endif %}
               <td class="comment">{{ week.get('comment', '') }}</td>
             </tr>
           </tbody>
